@@ -31,10 +31,10 @@
 				<input type="hidden" name="fbpfwp_options[access_token]" id="fbpfwp-access-token" value="<?php if ( isset( $this->options['access_token'] ) ) echo $this->options['access_token']; ?>" placeholder="Access Token" />
 				<span class="assistive">
 					<?php if ( ! $this->fbOptions['accessToken'] ) : ?>
-					Kein Zugriffsschlüssel vorhanden, bitte authorisieren:
+					&times; Access Token: 
 					<a href="<?php echo $this->fbOptions['loginUrl']; ?>">Facebook Login</a>
 					<?php else: ?>
-					Zugriffsschlüssel vorhanden.
+					&#10003; Access Token
 					<?php endif; ?>
 				</span>
 			</p>
