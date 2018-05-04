@@ -17,10 +17,10 @@ class FBPFWP_Admin {
 	private $fbOptions = array(
 		'appId'               => false,
 		'appSecret'           => false,
-		'defaultGraphVersion' => 'v2.10',
+		'defaultGraphVersion' => 'v3.0',
 		'pageId'              => false,
 		'accessToken'         => false,
-		'permissions'         => [ 'manage_pages', 'publish_pages', 'publish_actions' ],
+		'permissions'         => [ 'manage_pages', 'publish_pages' ],
 		'callback'            => false,
 		'loginUrl'            => false
 	);
@@ -34,6 +34,7 @@ class FBPFWP_Admin {
 		add_action( 'admin_enqueue_scripts',       array( $this, 'load_stylesnscripts' ) );
 		add_action( 'post_submitbox_misc_actions', array( $this, 'add_fb_checkbox' ) );
 		add_action( 'save_post',                   array( $this, 'save_fb_state' ) );
+		add_action( 'before_delete_post',          array( $this, 'delete_fb_post' ) );
 
 		add_action( 'load-options-general.php',    array( $this, 'prevent_editor_access' ) );
 		add_action( 'load-options-writing.php',    array( $this, 'prevent_editor_access' ) );
@@ -88,6 +89,8 @@ class FBPFWP_Admin {
 	 * Add Facebook publish checkbox to publish box for posts
 	 */
 	public function add_fb_checkbox() {
+		if ( ! $this->fbOptions['accessToken'] ) return;
+
 		$postId = get_the_ID();
 
 		if ( get_post_type( $postId ) != 'post' ) {
@@ -120,7 +123,10 @@ class FBPFWP_Admin {
 
 			$this->upsert_fb_state( $postId );
 		} else {
+			$this->delete_fb_post( $postId );
+
 			update_post_meta( $postId, 'fbpfwp_publish', 'off' );
+			delete_post_meta( $postId, 'fbpfwp_id' );
 		}
 	}
 
@@ -161,10 +167,15 @@ class FBPFWP_Admin {
 			if ( isset( $accessToken ) ) {
 				if ( empty( $this->options['access_token'] ) ) {
 					$oAuth2Client = $this->fb->getOAuth2Client();
-					$longLivedAccessToken = $oAuth2Client->getLongLivedAccessToken ( (string) $accessToken );
+					$longLivedAccessToken = $oAuth2Client->getLongLivedAccessToken( (string) $accessToken );
 
-					$response = $this->fb->get( '/' . $this->fbOptions['pageId'] . '?fields=access_token', (string) $longLivedAccessToken );
-					$pageToken = $response->getDecodedBody()['access_token'];
+					try {
+						$response = $this->fb->get( '/' . $this->fbOptions['pageId'] . '?fields=access_token', (string) $longLivedAccessToken );
+						$pageToken = $response->getDecodedBody()['access_token'];
+					} catch ( Exception $e ) {
+						echo 'Facebook SDK returned an error: ' . $e->getMessage();
+						exit;
+					}
 
 					$this->options['access_token'] = $pageToken;
 					$this->fbOptions['accessToken'] = $pageToken;
@@ -215,6 +226,13 @@ class FBPFWP_Admin {
 			$fbId = get_post_meta( $postId, 'fbpfwp_id', true );
 
 			if ( $fbId ) { // Update post
+				if ( $post->post_status === 'future') {
+					$data['scheduled_publish_time'] = mysql2date( 'U', $post->post_date_gmt, false );
+				} elseif ( $post->post_status === 'publish' ) {
+					$data['is_published'] = true;
+					unset( $data['scheduled_publish_time'] );
+				}
+
 				try {
 					$response = $this->fb->post( '/' . $fbId, $data, $this->fbOptions['accessToken'] );
 				} catch ( Exception $e ) {
@@ -223,7 +241,7 @@ class FBPFWP_Admin {
 				}
 			} elseif ( $post->post_status === 'future' ) { // New post scheduled
 				$data['published'] = false;
-				$data['scheduled_publish_time'] = get_post_time( 'U', true );
+				$data['scheduled_publish_time'] = mysql2date( 'U', $post->post_date_gmt, false );
 
 				try {
 					$response = $this->fb->post( '/' . $this->fbOptions['pageId'] . '/feed', $data, $this->fbOptions['accessToken'] );
@@ -242,8 +260,29 @@ class FBPFWP_Admin {
 				}
 			}		
 		}
+	}
 
+	/**
+	 * Delete post from Facebook.
+	 */
+	public function delete_fb_post( $postId ) {
+		$fbId = get_post_meta( $postId, 'fbpfwp_id', true );
+		if ( ! $fbId ) return;
 
+		try {
+			$response = $this->fb->delete( '/' . $fbId, array(), $this->fbOptions['accessToken'] );
+		} catch ( Facebook\Exceptions\FacebookResponseException $e ) {
+			echo 'Graph returned an error: ' . $e->getMessage();
+			exit;
+		} catch ( Facebook\Exceptions\FacebookSDKException $e ) {
+			echo 'Facebook SDK returned an error: ' . $e->getMessage();
+			exit;
+		} catch ( Exception $e ) {
+			// echo $e->getMessage();
+			// exit;
+
+			return; // This allows to delete the Facebook Id on the post if there are problems
+		}
 	}
 
 }
