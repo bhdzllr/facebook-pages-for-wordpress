@@ -1,0 +1,20 @@
+.fbpfwp-options form div {
+	margin: 1em 0;
+}
+
+.fbpfwp-options legend {
+	display: none;
+}
+
+.fbpfwp-options label {
+	display: inline-block;
+
+	min-width: 9em;
+}
+
+.fbpfwp-options .assistive {
+	margin: 0;
+
+	color: #999999;
+	font-size: 0.9em;
+}
