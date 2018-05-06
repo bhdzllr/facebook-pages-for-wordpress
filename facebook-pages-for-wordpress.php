@@ -39,6 +39,9 @@ class FBPFWP_Main {
 			$fbpfwp_admin = new FBPFWP_Admin();
 		} else {
 			// Front-End
+			require_once 'fbpfwp-peeker.php';
+
+			new FBPFWP_Peeker();
 		}
 	}
 
