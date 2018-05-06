@@ -75,5 +75,5 @@ Facebook, when deleting it from WordPress, the post is also deleted from Faceboo
 
 ## Thanks ##
 
-Thanks to "prunmit" for the (tips in his post)[https://wordpress.stackexchange.com/questions/195486/allow-facebook-to-preview-posts-before-published]
+Thanks to "prunmit" for the [tips in his post](https://wordpress.stackexchange.com/questions/195486/allow-facebook-to-preview-posts-before-published)
 with the Facebook bots for scheduled posts.
