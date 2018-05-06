@@ -71,3 +71,9 @@ in the future (Facebook does not allow longer).
 When removing the tick from the checkbox, the post will be deleted from
 Facebook. When moving a post in WordPress to the trash, the post remains on
 Facebook, when deleting it from WordPress, the post is also deleted from Facebook.
+
+
+## Thanks ##
+
+Thanks to "prunmit" for the (tips in his post)["https://wordpress.stackexchange.com/questions/195486/allow-facebook-to-preview-posts-before-published"]
+with the Facebook bots for scheduled posts.
