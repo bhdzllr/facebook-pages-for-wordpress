@@ -118,7 +118,7 @@ class FBPFWP_Admin {
 	public function save_fb_state() {
 		$postId = get_the_ID();
 
-		if ( isset ( $_POST['fbpfwp_publish'] ) ) {
+		if ( isset( $_POST['fbpfwp_publish'] ) ) {
 			update_post_meta( $postId, 'fbpfwp_publish', $_POST['fbpfwp_publish'] );
 
 			$this->upsert_fb_state( $postId );
@@ -141,7 +141,7 @@ class FBPFWP_Admin {
 		if ( ! empty( $this->options['page_id']      ) ) $this->fbOptions['pageId'] = $this->options['page_id'];
 		if ( ! empty( $this->options['access_token'] ) ) $this->fbOptions['accessToken'] = $this->options['access_token'];
 
-		if ( isset( $this->options['app_id'] ) && isset( $this->options['app_secret'] ) ) {
+		if ( $this->fbOptions['appId'] && $this->fbOptions['appSecret'] ) {
 			$this->fb = new Facebook([
 				'app_id' => $this->fbOptions['appId'],
 				'app_secret' => $this->fbOptions['appSecret'],
