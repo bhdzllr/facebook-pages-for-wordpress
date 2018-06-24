@@ -16,7 +16,7 @@ WordPress plugins folder ("wp-content/plugins/").
 
 ### Facebook App ###
 
-1. Create an app on Facebook
+1. **Create an app on Facebook**
 2. **Settings - Basic**
 	* Display Name: Choose app name
 	* App Domains: Add domain with and without "www"
@@ -54,12 +54,18 @@ WordPress plugins folder ("wp-content/plugins/").
 	* Login from Devices: No
 	* Everything else remains empty
 
+
 ### WordPress ###
 
 After installation "Facebook Pages for Wordpress" is available from the
 WordPress administration. The fields for App Id, App Secret and Page Id
 (to be taken from the created Facebook app) must be completed and then
 an authentication must be done.
+
+*Note: After the authentication (by an user registered as administrator in the app roles),
+the application must be switched to public. For re-authentication the 
+application may need to be put into development mode first and made public again
+after authentication (Section Review).*
 
 
 ## Usage ##
