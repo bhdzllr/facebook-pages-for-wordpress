@@ -29,20 +29,13 @@ class FBPFWP_Main {
 	private function __construct() {
 		register_activation_hook( __FILE__, array( $this, 'activate' ) );
 		register_deactivation_hook( __FILE__, array( $this, 'deactivate' ) );
-
 		register_uninstall_hook( __FILE__, 'uninstall' );
 
-		if ( is_admin() ) {
-			// Back-End
-			require_once 'fbpfwp-admin.php';
+		require_once 'fbpfwp-admin.php';
+		require_once 'fbpfwp-peeker.php';
 
-			$fbpfwp_admin = new FBPFWP_Admin();
-		} else {
-			// Front-End
-			require_once 'fbpfwp-peeker.php';
-
-			new FBPFWP_Peeker();
-		}
+		new FBPFWP_Admin();
+		new FBPFWP_Peeker();
 	}
 
 	/**

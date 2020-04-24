@@ -4,10 +4,10 @@
 	<form id="fbpfwp-options-form" method="post" action="<?php echo admin_url( 'options.php' ); ?>">
 		<fieldset>
 			<legend>Options</legend>
-			<?php 
+			<?php
 
-			settings_fields( 'fbpfwp_options' ); 
-			do_settings_sections( 'fbpfwp.php' ); 
+			settings_fields( 'fbpfwp_options' );
+			do_settings_sections( 'fbpfwp.php' );
 
 			?>
 

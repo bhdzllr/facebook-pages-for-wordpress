@@ -29,11 +29,22 @@ class FBPFWP_Admin {
 	 * Construct class for hooks
 	 */
 	public function __construct() {
-		add_action( 'admin_init',                  array( $this, 'admin_init' ) );
+		register_post_meta( 'post', 'fbpfwp_2_publish', array(
+			'show_in_rest' => true,
+			'single'       => true,
+			'type'         => 'boolean',
+		) );
+
+		register_post_meta( 'post', 'fbpfwp_2_id', array(
+			'show_in_rest' => true,
+			'single'       => true,
+			'type'         => 'string',
+		) );
+
 		add_action( 'admin_menu',                  array( $this, 'register_settings' ) );
 		add_action( 'admin_enqueue_scripts',       array( $this, 'load_stylesnscripts' ) );
-		add_action( 'post_submitbox_misc_actions', array( $this, 'add_fb_checkbox' ) );
-		add_action( 'save_post',                   array( $this, 'save_fb_state' ) );
+
+		add_action( 'rest_after_insert_post',      array( $this, 'save_fb_state' ), 10, 2 );
 		add_action( 'before_delete_post',          array( $this, 'delete_fb_post' ) );
 
 		add_action( 'load-options-general.php',    array( $this, 'prevent_editor_access' ) );
@@ -43,17 +54,6 @@ class FBPFWP_Admin {
 		add_action( 'load-options-media.php',      array( $this, 'prevent_editor_access' ) );
 		add_action( 'load-options-permalink.php',  array( $this, 'prevent_editor_access' ) );
 		add_action( 'load-options.php',            array( $this, 'prevent_editor_access' ) );
-	}
-
-	/**
-	 * Initialize admin area
-	 */
-	public function admin_init() {
-		if ( ! current_user_can( 'fbpfwp_manage_options' ) ) return; 
-
-		$this->options = get_option( 'fbpfwp_options', true );
-
-		$this->init_fb();
 	}
 
 	/**
@@ -82,23 +82,15 @@ class FBPFWP_Admin {
 	 * Load styles and scripts
 	 */
 	public function load_stylesnscripts() {
-		wp_enqueue_style( 'fbpfwp-admin', plugin_dir_url( __FILE__ ) . 'css/fbpfwp-admin.css' );
-	}
-
-	/**
-	 * Add Facebook publish checkbox to publish box for posts
-	 */
-	public function add_fb_checkbox() {
-		if ( ! $this->fbOptions['accessToken'] ) return;
-
-		$postId = get_the_ID();
-
-		if ( get_post_type( $postId ) != 'post' ) {
-			return;
-		}
-
-		$checked = get_post_meta( $postId, 'fbpfwp_publish', true );
-		include_once 'templates/fb-checkbox.php';
+		wp_enqueue_script( 'fbpfwp-admin-script', plugin_dir_url( __FILE__ ) . 'js/fbpfwp-admin.js', [
+			'wp-plugins',
+			'wp-edit-post',
+			'wp-element',
+            'wp-components',
+			'wp-data',
+			'wp-i18n',
+		] );
+		wp_enqueue_style( 'fbpfwp-admin-style', plugin_dir_url( __FILE__ ) . 'css/fbpfwp-admin.css' );
 	}
 
 	/**
@@ -115,18 +107,18 @@ class FBPFWP_Admin {
 	/**
 	 * Save state of Facebook publish checkbox
 	 */
-	public function save_fb_state() {
-		$postId = get_the_ID();
+	public function save_fb_state( $post, $request ) {
+		$isPostToFacebookActive = get_post_meta( $post->ID, 'fbpfwp_2_publish', true );
 
-		if ( isset( $_POST['fbpfwp_publish'] ) ) {
-			update_post_meta( $postId, 'fbpfwp_publish', $_POST['fbpfwp_publish'] );
+		$this->options = get_option( 'fbpfwp_options', true );
+		$this->init_fb();
 
-			$this->upsert_fb_state( $postId );
+		if ($isPostToFacebookActive) {
+			$this->upsert_fb_state( $post );
 		} else {
-			$this->delete_fb_post( $postId );
+			$this->delete_fb_post( $post );
 
-			update_post_meta( $postId, 'fbpfwp_publish', 'off' );
-			delete_post_meta( $postId, 'fbpfwp_id' );
+			delete_post_meta( $post->ID, 'fbpfwp_2_id' );
 		}
 	}
 
@@ -134,8 +126,6 @@ class FBPFWP_Admin {
 	 * Initialize Facebook API and check for login callback
 	 */
 	private function init_fb() {
-		session_start();
-
 		if ( ! empty( $this->options['app_id'] )       ) $this->fbOptions['appId'] = $this->options['app_id'];
 		if ( ! empty( $this->options['app_secret'] )   ) $this->fbOptions['appSecret'] = $this->options['app_secret'];
 		if ( ! empty( $this->options['page_id']      ) ) $this->fbOptions['pageId'] = $this->options['page_id'];
@@ -194,9 +184,8 @@ class FBPFWP_Admin {
 	/**
 	 * Publish to Facebook
 	 */
-	private function upsert_fb_state( $postId ) {
-		$post = get_post( $postId );
-		$format = get_post_format( $postId );
+	private function upsert_fb_state( $post ) {
+		$format = get_post_format( $post->ID );
 		$data = [];
 
 		if ( empty( $post->post_excerpt ) ) {
@@ -212,7 +201,7 @@ class FBPFWP_Admin {
 		}
 
 		$data['message'] = $excerpt;
-		$data['link'] = get_permalink( $postId );
+		$data['link'] = get_permalink( $post->ID );
 
 		if ( $format == 'aside' ) unset( $data['link'] );
 
@@ -223,7 +212,7 @@ class FBPFWP_Admin {
 		// )
 
 		if ( $post->post_status === 'publish' || $post->post_status === 'future' ) {
-			$fbId = get_post_meta( $postId, 'fbpfwp_id', true );
+			$fbId = get_post_meta( $post->ID, 'fbpfwp_2_id', true );
 
 			if ( $fbId ) { // Update post
 				if ( $post->post_status === 'future') {
@@ -245,7 +234,7 @@ class FBPFWP_Admin {
 
 				try {
 					$response = $this->fb->post( '/' . $this->fbOptions['pageId'] . '/feed', $data, $this->fbOptions['accessToken'] );
-					update_post_meta( $postId, 'fbpfwp_id', $response->getDecodedBody()['id'] );
+					update_post_meta( $post->ID, 'fbpfwp_2_id', $response->getDecodedBody()['id'] );
 				} catch ( Exception $e ) {
 					echo $e->getMessage();
 					exit;
@@ -253,7 +242,7 @@ class FBPFWP_Admin {
 			} elseif ( $post->post_status === 'publish' ) { // New post instantly
 				try {
 					$response = $this->fb->post( '/' . $this->fbOptions['pageId'] . '/feed', $data, $this->fbOptions['accessToken'] );
-					update_post_meta( $postId, 'fbpfwp_id', $response->getDecodedBody()['id'] );
+					update_post_meta( $post->ID, 'fbpfwp_2_id', $response->getDecodedBody()['id'] );
 				} catch ( Exception $e ) {
 					echo $e->getMessage();
 					exit;
@@ -265,8 +254,8 @@ class FBPFWP_Admin {
 	/**
 	 * Delete post from Facebook.
 	 */
-	public function delete_fb_post( $postId ) {
-		$fbId = get_post_meta( $postId, 'fbpfwp_id', true );
+	public function delete_fb_post( $post ) {
+		$fbId = get_post_meta( $post->ID, 'fbpfwp_2_id', true );
 		if ( ! $fbId ) return;
 
 		try {

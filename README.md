@@ -70,7 +70,7 @@ after authentication (Section Review).*
 
 ## Usage ##
 
-Each post now has a checkbox "Post to Facebook Page" with which the posts can be
+Each post now has a toggle "Post to Facebook Page" inside a Facebook-Panel with which the posts can be
 posted directly on the Facebook Page. Posts can also be scheduled up to 180 days
 in the future (Facebook does not allow longer).
 
