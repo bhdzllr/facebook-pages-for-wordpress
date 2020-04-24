@@ -29,6 +29,8 @@ class FBPFWP_Admin {
 	 * Construct class for hooks
 	 */
 	public function __construct() {
+		$this->options = get_option( 'fbpfwp_options', true );
+
 		register_post_meta( 'post', 'fbpfwp_2_publish', array(
 			'show_in_rest' => true,
 			'single'       => true,
@@ -110,7 +112,6 @@ class FBPFWP_Admin {
 	public function save_fb_state( $post, $request ) {
 		$isPostToFacebookActive = get_post_meta( $post->ID, 'fbpfwp_2_publish', true );
 
-		$this->options = get_option( 'fbpfwp_options', true );
 		$this->init_fb();
 
 		if ($isPostToFacebookActive) {
