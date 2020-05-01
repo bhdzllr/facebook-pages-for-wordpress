@@ -44,10 +44,10 @@ class FBPFWP_Main {
 	 * @return FBPFWP_Main class
 	 */
 	public static function getInstance() {
-		if ( ! isset( self::$instance ) )
-			self::$instance = new self;
+		if ( ! isset( static::$instance ) )
+			static::$instance = new static();
 
-		return self::$instance;
+		return static::$instance;
 	}
 
 	/**

@@ -30,6 +30,7 @@ class FBPFWP_Admin {
 	 */
 	public function __construct() {
 		$this->options = get_option( 'fbpfwp_options', true );
+		$this->init_fb();
 
 		register_post_meta( 'post', 'fbpfwp_2_publish', array(
 			'show_in_rest' => true,
@@ -43,11 +44,13 @@ class FBPFWP_Admin {
 			'type'         => 'string',
 		) );
 
+		// add_action( 'admin_init',                  array( $this, 'admin_init' ) );
 		add_action( 'admin_menu',                  array( $this, 'register_settings' ) );
 		add_action( 'admin_enqueue_scripts',       array( $this, 'load_stylesnscripts' ) );
 
 		add_action( 'rest_after_insert_post',      array( $this, 'save_fb_state' ), 10, 2 );
-		add_action( 'before_delete_post',          array( $this, 'delete_fb_post' ) );
+		add_action( 'transition_post_status',      array( $this, 'transition_post_status' ), 10, 3 );
+		// add_action( 'before_delete_post',          array( $this, 'delete_fb_post' ) ); // Deleting from trash
 
 		add_action( 'load-options-general.php',    array( $this, 'prevent_editor_access' ) );
 		add_action( 'load-options-writing.php',    array( $this, 'prevent_editor_access' ) );
@@ -62,6 +65,8 @@ class FBPFWP_Admin {
 	 * Add settings page
 	 */
 	public function register_settings() {
+		if ( ! current_user_can( 'fbpfwp_manage_options' ) ) return;
+
 		register_setting( 'fbpfwp_options', 'fbpfwp_options', array( $this, 'sanitze_options' ) );
 		add_menu_page( 'Facebook Pages for WordPress', 'Facebook Pages for WordPress', 'fbpfwp_manage_options', 'fbpfwp', array( $this, 'render_settings_page' ) );
 	}
@@ -88,7 +93,7 @@ class FBPFWP_Admin {
 			'wp-plugins',
 			'wp-edit-post',
 			'wp-element',
-            'wp-components',
+			'wp-components',
 			'wp-data',
 			'wp-i18n',
 		] );
@@ -112,13 +117,12 @@ class FBPFWP_Admin {
 	public function save_fb_state( $post, $request ) {
 		$isPostToFacebookActive = get_post_meta( $post->ID, 'fbpfwp_2_publish', true );
 
-		$this->init_fb();
-
 		if ($isPostToFacebookActive) {
 			$this->upsert_fb_state( $post );
 		} else {
 			$this->delete_fb_post( $post );
 
+			update_post_meta( $post->ID, 'fbpfwp_2_publish', false );
 			delete_post_meta( $post->ID, 'fbpfwp_2_id' );
 		}
 	}
@@ -133,6 +137,8 @@ class FBPFWP_Admin {
 		if ( ! empty( $this->options['access_token'] ) ) $this->fbOptions['accessToken'] = $this->options['access_token'];
 
 		if ( $this->fbOptions['appId'] && $this->fbOptions['appSecret'] ) {
+			session_start();
+
 			$this->fb = new Facebook([
 				'app_id' => $this->fbOptions['appId'],
 				'app_secret' => $this->fbOptions['appSecret'],
@@ -253,9 +259,23 @@ class FBPFWP_Admin {
 	}
 
 	/**
+	 * Check if new post status is "trash" and delete post from Facebook when moved to trash.
+	 */
+	public function transition_post_status( $newStatus, $oldStatus, $post ) {
+		if ($newStatus == 'trash') {
+			$this->delete_fb_post( $post );
+
+			update_post_meta( $post->ID, 'fbpfwp_2_publish', false );
+			delete_post_meta( $post->ID, 'fbpfwp_2_id' );
+		}
+	}
+
+	/**
 	 * Delete post from Facebook.
 	 */
 	public function delete_fb_post( $post ) {
+		if ( is_int( $post ) ) $post = get_post( $post );
+
 		$fbId = get_post_meta( $post->ID, 'fbpfwp_2_id', true );
 		if ( ! $fbId ) return;
 
