@@ -54,11 +54,6 @@ class FBPFWP_Main {
 	 * Forbid clone from outside via `__clone()`
 	 */
 	private function __clone() {}
-	
-	/**
-	 * Forbid deserialization from outside via `__wakeup()`
-	 */
-	private function __wakeup() {}
 
 	/**
 	 * Plugin activation
